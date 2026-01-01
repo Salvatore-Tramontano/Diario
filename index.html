@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0f172a">
     <title>Diario</title>
     
-    <!-- Librerie -->
+    <!-- Librerie Esterne -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -14,546 +14,498 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
         
+        /* Base Reset & Mobile Optimization */
         body { 
             font-family: 'Inter', sans-serif; 
             background-color: #0f172a; 
-            color: white; 
-            -webkit-tap-highlight-color: transparent; 
-            overscroll-behavior-y: none; 
-            position: fixed; /* Fix scroll bounce intera pagina */
-            width: 100%;
-            height: 100%;
+            color: #f1f5f9; 
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden; /* Gestiamo lo scroll internamente */
+            position: fixed; width: 100%; height: 100%;
         }
-        
-        /* Scrollbar invisibili */
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+        /* Utilities */
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .hide-scroll::-webkit-scrollbar { display: none; }
+        .touch-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        /* Glass Effect */
+        .glass-panel { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+
+        /* UI Components */
+        .btn-primary { @apply bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold shadow-lg shadow-purple-900/40 active:scale-95 transition-transform; }
+        .btn-secondary { @apply bg-slate-800 border border-slate-700 text-slate-300 font-medium active:bg-slate-700 transition-colors; }
         
-        .slide-up { animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .cat-chip { 
+            @apply flex-shrink-0 px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-900 border border-slate-800 text-slate-400 transition-all duration-200 select-none;
+        }
+        .cat-chip.active { 
+            @apply bg-white text-slate-900 border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105 z-10; 
+        }
 
-        /* Custom UI Elements Touch-Friendly */
+        /* Modal Overlay Transition */
+        #modalOverlay { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateY(100%); }
+        #modalOverlay.open { transform: translateY(0); }
+
+        /* Range Slider */
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%;
-            background: #a855f7; margin-top: -12px; box-shadow: 0 4px 10px rgba(168, 85, 247, 0.5);
-            transition: transform 0.1s;
+            -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%;
+            background: #d946ef; margin-top: -10px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #334155; border-radius: 2px; }
 
-        .nav-item.active i { color: #a855f7; transform: translateY(-2px); }
-        .nav-item.active span { color: white; opacity: 1; }
-        .nav-item i { transition: all 0.2s; }
-        
-        /* Dropdown */
-        .dropdown-content { display: none; position: absolute; background-color: #1e293b; min-width: 200px; z-index: 60; border: 1px solid #334155; border-radius: 1rem; padding: 0.5rem; margin-top: 8px; box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.6); }
-        .dropdown-content.show { display: block; animation: fadeIn 0.2s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Stile Filtri Orizzontali */
-        .cat-chip-container { display: flex; gap: 12px; overflow-x: auto; padding: 4px 16px 12px 16px; width: 100%; align-items: center; }
-        .cat-chip-modern { 
-            flex-shrink: 0; height: 40px; padding: 0 20px; border-radius: 99px;
-            font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-            background-color: #1e293b; color: #94a3b8; border: 1px solid #334155;
-            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        /* FAB */
+        .fab {
+            position: absolute; bottom: 100px; right: 24px; width: 60px; height: 60px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; z-index: 50;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            border: 2px solid rgba(255,255,255,0.1);
         }
-        .cat-chip-modern.active { 
-            background: linear-gradient(135deg, #7c3aed, #c026d3); color: white; border-color: transparent;
-            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4); transform: scale(1.05);
-        }
-
-        /* Modal Grid */
-        .modal-cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-        .modal-cat-item { 
-            display: flex; flex-col: column; align-items: center; justify-content: center; height: 75px; 
-            border-radius: 16px; border: 1px solid #334155; bg: #1e293b; transition: all 0.2s; cursor: pointer; color: #64748b;
-        }
-        .modal-cat-item.selected { 
-            background: #7c3aed; border-color: #a855f7; color: white; box-shadow: 0 10px 20px -5px rgba(124, 58, 237, 0.4); transform: scale(1.05); 
-        }
-
-        /* FAB Button Fisso */
-        .fab-btn {
-            position: fixed; bottom: 110px; right: 20px; width: 64px; height: 64px;
-            background: linear-gradient(135deg, #9333ea, #db2777);
-            border-radius: 50%; box-shadow: 0 10px 25px -5px rgba(219, 39, 119, 0.5);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 28px; color: white; z-index: 50; 
-            transition: transform 0.2s; border: 3px solid rgba(255,255,255,0.1);
-        }
-        .fab-btn:active { transform: scale(0.9); }
-
-        #saveIndicator.show { opacity: 1; }
-        
-        /* Modal Transition */
-        #addModal { transition: transform 0.3s ease-out; }
-        #addModal.closing { transform: translateY(100%); }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden text-slate-100 bg-[#0f172a]">
+<body class="flex flex-col">
 
-    <!-- HEADER (Fisso in alto) -->
-    <div class="bg-slate-900 z-40 shadow-xl flex-none relative flex flex-col border-b border-slate-800/50">
-        <!-- Top Row -->
-        <div class="pt-10 pb-2 px-5 flex justify-between items-center bg-slate-900">
+    <!-- 1. HEADER FISSO (Titolo + Filtri Macro) -->
+    <header class="flex-none z-20 bg-slate-950 border-b border-white/5 relative">
+        <div class="pt-10 pb-2 px-5 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-tight">Diario</h1>
-                <div class="flex items-center gap-2 h-4">
-                    <span id="saveIndicator" class="text-[10px] text-green-400 flex items-center gap-1 font-bold opacity-0 transition-opacity"><i class="fa-solid fa-check"></i> Salvato</span>
-                </div>
+                <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Diario</h1>
+                <p id="statusMsg" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest transition-colors duration-500">Pronto</p>
             </div>
             <div class="flex gap-3">
-                <button onclick="document.getElementById('fileInput').click()" class="bg-slate-800 w-10 h-10 rounded-full border border-slate-700 hover:bg-slate-700 transition flex items-center justify-center active:scale-95 text-slate-400">
-                    <i class="fa-solid fa-upload"></i>
-                </button>
-                <input type="file" id="fileInput" class="hidden" accept=".json,.csv,.xlsx,.xls" onchange="importFile(event)">
+                <!-- Nota: Import rimosso onchange inline per evitare errori -->
+                <button onclick="app.handlers.import()" class="w-9 h-9 rounded-full bg-slate-900 border border-slate-700 text-slate-400 flex items-center justify-center active:bg-slate-800"><i class="fa-solid fa-file-import"></i></button>
+                <input type="file" id="fileInput" class="hidden" accept=".json,.csv,.xlsx,.xls">
 
-                <div class="relative">
-                    <button onclick="toggleExportMenu()" class="bg-slate-800 w-10 h-10 rounded-full border border-slate-700 hover:bg-slate-700 transition flex items-center justify-center active:scale-95 text-slate-400">
-                        <i class="fa-solid fa-download"></i>
-                    </button>
-                    <!-- Export Menu -->
-                    <div id="exportMenu" class="hidden absolute right-0 mt-3 w-56 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden ring-1 ring-white/10">
-                         <div class="px-4 py-3 bg-slate-900/80 border-b border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Esporta Dati</div>
-                        <button onclick="exportData('xlsx')" class="w-full text-left px-5 py-4 text-sm hover:bg-slate-700 flex items-center gap-3 text-slate-200 border-b border-slate-700/50">
-                            <i class="fa-solid fa-file-excel text-green-500 text-lg"></i> Excel (.xlsx)
-                        </button>
-                        <button onclick="exportData('csv')" class="w-full text-left px-5 py-4 text-sm hover:bg-slate-700 flex items-center gap-3 text-slate-200 border-b border-slate-700/50">
-                            <i class="fa-solid fa-file-csv text-blue-400 text-lg"></i> CSV
-                        </button>
-                        <button onclick="exportData('json')" class="w-full text-left px-5 py-4 text-sm hover:bg-slate-700 flex items-center gap-3 text-slate-200">
-                            <i class="fa-solid fa-file-code text-purple-400 text-lg"></i> Backup JSON
-                        </button>
-                    </div>
-                </div>
+                <button onclick="app.handlers.export()" class="w-9 h-9 rounded-full bg-slate-900 border border-slate-700 text-slate-400 flex items-center justify-center active:bg-slate-800"><i class="fa-solid fa-download"></i></button>
             </div>
         </div>
 
-        <!-- Filtri Macro (Chips) -->
-        <div class="pt-2 pb-0">
-            <div class="cat-chip-container hide-scroll" id="filterCatContainer">
-                <!-- JS -->
-            </div>
+        <!-- Filtri Orizzontali (Scrollable) -->
+        <div class="w-full overflow-x-auto hide-scroll pb-3 pt-1 px-5 flex gap-3" id="categoryFilterBar">
+            <!-- Iniettato via JS -->
         </div>
+    </header>
 
-        <!-- Filtri Micro (Toolbar) -->
-        <div class="grid grid-cols-12 gap-3 px-4 pb-4 pt-1 items-center">
-            <div class="col-span-5">
-                 <select id="filterTime" onchange="applyFilters()" class="w-full bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold p-3 outline-none text-slate-300 uppercase tracking-wide appearance-none h-10">
-                    <option value="year" selected>Quest'Anno</option>
-                    <option value="month">Questo Mese</option>
-                    <option value="week">7 Giorni</option>
-                    <option value="today">Oggi</option>
-                    <option value="all">Tutto</option>
-                </select>
-            </div>
-            
-            <div class="col-span-4 dropdown-check invisible" id="ratingFilterWrapper">
-                <button onclick="toggleRatingDropdown()" class="w-full bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold p-3 outline-none text-left flex justify-between items-center h-10 text-slate-300 uppercase tracking-wide active:bg-slate-700">
-                    <span id="ratingBtnLabel" class="truncate">Voti</span>
-                    <i class="fa-solid fa-chevron-down text-[8px] opacity-50"></i>
-                </button>
-                <div id="ratingDropdown" class="dropdown-content">
-                    <div class="space-y-1 p-1">
-                        <label class="flex items-center gap-3 text-sm p-3 hover:bg-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="5" class="w-5 h-5 accent-purple-500 rating-check" onchange="updateRatingFilter()"> <span class="font-bold">5 ★</span></label>
-                        <label class="flex items-center gap-3 text-sm p-3 hover:bg-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="4" class="w-5 h-5 accent-purple-500 rating-check" onchange="updateRatingFilter()"> <span class="font-bold">4 ★</span></label>
-                        <label class="flex items-center gap-3 text-sm p-3 hover:bg-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="3" class="w-5 h-5 accent-purple-500 rating-check" onchange="updateRatingFilter()"> <span class="font-bold">3 ★</span></label>
-                        <label class="flex items-center gap-3 text-sm p-3 hover:bg-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="2" class="w-5 h-5 accent-purple-500 rating-check" onchange="updateRatingFilter()"> <span class="font-bold">2 ★</span></label>
-                        <label class="flex items-center gap-3 text-sm p-3 hover:bg-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="1" class="w-5 h-5 accent-purple-500 rating-check" onchange="updateRatingFilter()"> <span class="font-bold">1 ★</span></label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-span-3 flex items-center justify-end gap-2">
-                 <span class="text-[10px] font-bold text-slate-500 hidden sm:block" id="filterCountDisplay">0</span>
-                 <button onclick="resetFilters()" class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-red-500/20 transition active:scale-90"><i class="fa-solid fa-rotate-left"></i></button>
-            </div>
-        </div>
-
-        <!-- Filtri Specifici (Dynamic) -->
-        <div id="filterSpecifics" class="hidden border-t border-slate-700/50 py-3 px-4 bg-slate-900/40 gap-2 overflow-x-auto hide-scroll flex-nowrap">
-            <div class="flex gap-2 w-full" id="dynamicFilters"></div>
-        </div>
-    </div>
-
-    <!-- VIEW: DIARIO -->
-    <div id="viewHome" class="flex-1 flex flex-col relative overflow-hidden bg-[#0f172a]">
-        <!-- PB Aumentato per non tagliare l'ultimo elemento -->
-        <main id="entriesList" class="flex-1 overflow-y-auto p-4 space-y-4 hide-scroll pb-48">
+    <!-- 2. CONTENUTO PRINCIPALE (Scrollabile) -->
+    <main id="mainContainer" class="flex-1 touch-scroll relative bg-slate-900">
+        <!-- VISTA LISTA -->
+        <div id="view-list" class="p-4 pb-32 space-y-4 min-h-full">
             <!-- Lista Items -->
-        </main>
-        
-        <!-- FAB FISSO -->
-        <button onclick="openModal()" class="fab-btn group active:scale-90 transition-transform">
-            <i class="fa-solid fa-plus group-hover:rotate-90 transition duration-300"></i>
-        </button>
-    </div>
+        </div>
 
-    <!-- VIEW: REPORT -->
-    <div id="viewDash" class="flex-1 flex flex-col hidden overflow-hidden bg-[#0f172a]">
-        <div class="px-5 pt-6 pb-2 flex items-center justify-between" id="dashTimeControls">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Aggregazione</span>
-            <div class="flex bg-slate-800 p-1 rounded-lg gap-1">
-                <button onclick="setDashTime('day')" id="dt_day" class="px-3 py-1.5 text-[10px] font-bold uppercase rounded text-slate-400 transition">GG</button>
-                <button onclick="setDashTime('week')" id="dt_week" class="px-3 py-1.5 text-[10px] font-bold uppercase rounded text-slate-400 transition">Set</button>
-                <button onclick="setDashTime('month')" id="dt_month" class="px-3 py-1.5 text-[10px] font-bold uppercase rounded text-slate-400 transition bg-slate-600 text-white shadow-sm">Mes</button>
-                <button onclick="setDashTime('year')" id="dt_year" class="px-3 py-1.5 text-[10px] font-bold uppercase rounded text-slate-400 transition">Ann</button>
+        <!-- VISTA REPORT -->
+        <div id="view-report" class="hidden p-5 pb-32 space-y-6 min-h-full">
+            <!-- Filtri Tempo Report -->
+            <div class="flex justify-between items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
+                <button onclick="app.setReportTime('week')" class="report-time-btn flex-1 py-1.5 text-[10px] font-bold uppercase rounded text-center text-slate-400" data-t="week">7GG</button>
+                <button onclick="app.setReportTime('month')" class="report-time-btn flex-1 py-1.5 text-[10px] font-bold uppercase rounded text-center text-slate-400 bg-slate-600 text-white shadow" data-t="month">Mese</button>
+                <button onclick="app.setReportTime('year')" class="report-time-btn flex-1 py-1.5 text-[10px] font-bold uppercase rounded text-center text-slate-400" data-t="year">Anno</button>
+                <button onclick="app.setReportTime('all')" class="report-time-btn flex-1 py-1.5 text-[10px] font-bold uppercase rounded text-center text-slate-400" data-t="all">Tot</button>
             </div>
+            <!-- Contenuto Charts -->
+            <div id="reportContent" class="space-y-6"></div>
         </div>
-        <div id="dashContent" class="flex-1 overflow-y-auto p-5 pb-48 space-y-8 hide-scroll"></div>
-    </div>
+    </main>
 
-    <!-- BOTTOM NAVIGATION (Fissa in basso) -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 h-[85px] flex justify-around items-center z-50 pb-5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <div onclick="switchView('home')" class="nav-item active flex flex-col items-center justify-center w-full h-full cursor-pointer text-slate-500 group pt-2">
-            <div class="p-1.5 rounded-2xl group-hover:bg-slate-800/50 transition mb-1"><i class="fa-solid fa-book-open text-2xl"></i></div>
-            <span class="text-[10px] font-bold tracking-widest">DIARIO</span>
-        </div>
-        <div onclick="switchView('dash')" class="nav-item flex flex-col items-center justify-center w-full h-full cursor-pointer text-slate-500 group pt-2">
-            <div class="p-1.5 rounded-2xl group-hover:bg-slate-800/50 transition mb-1"><i class="fa-solid fa-chart-pie text-2xl"></i></div>
-            <span class="text-[10px] font-bold tracking-widest">REPORT</span>
-        </div>
+    <!-- FAB BUTTON (Solo in vista Lista) -->
+    <button id="fabBtn" onclick="app.openModal()" class="fab btn-primary">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- 3. BOTTOM NAVIGATION -->
+    <nav class="flex-none h-20 bg-slate-950/90 backdrop-blur-xl border-t border-white/5 flex justify-around items-center pb-2 z-30">
+        <button onclick="app.switchView('list')" class="nav-btn flex flex-col items-center gap-1 text-violet-400 p-4" data-v="list">
+            <i class="fa-solid fa-book-open text-xl"></i>
+            <span class="text-[9px] font-bold">DIARIO</span>
+        </button>
+        <button onclick="app.switchView('report')" class="nav-btn flex flex-col items-center gap-1 text-slate-500 p-4" data-v="report">
+            <i class="fa-solid fa-chart-pie text-xl"></i>
+            <span class="text-[9px] font-bold">REPORT</span>
+        </button>
     </nav>
 
-    <!-- MODALE INSERIMENTO -->
-    <div id="addModal" class="fixed inset-0 z-[60] hidden flex flex-col justify-end">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity" onclick="closeModal()"></div>
-        
-        <!-- Content -->
-        <div id="modalContent" class="glass rounded-t-[2.5rem] p-6 w-full max-h-[92vh] overflow-y-auto hide-scroll relative slide-up z-[70] bg-[#1e293b] shadow-2xl border-t border-white/10">
-            <!-- Drag Handle / Close -->
-            <div class="flex justify-center mb-4" id="dragHandle">
-                <div class="w-16 h-1.5 bg-slate-600/50 rounded-full"></div>
-            </div>
-            
-            <!-- Close X Button -->
-            <button onclick="closeModal()" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center bg-slate-800 rounded-full text-slate-400 hover:text-white">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            
-            <label class="text-[11px] font-black text-slate-400 uppercase mb-4 block tracking-widest ml-1">Scegli Categoria</label>
-            <div class="modal-cat-grid mb-6" id="modalCatContainer"></div>
-            
-            <div id="dynamicForm" class="space-y-5 animate-fade-in"></div>
-            
-            <div class="pt-8 pb-10">
-                <button onclick="saveEntry()" class="w-full bg-gradient-to-r from-purple-600 to-pink-500 py-4 rounded-2xl font-bold text-lg text-white shadow-xl shadow-purple-900/30 hover:opacity-90 active:scale-95 transition flex justify-center items-center gap-3 h-14">
-                    <span>Salva</span> <i class="fa-solid fa-check"></i>
-                </button>
-            </div>
+    <!-- 4. MODALE INSERIMENTO (Full Screen Overlay) -->
+    <div id="modalOverlay" class="fixed inset-0 z-50 bg-slate-900 flex flex-col">
+        <!-- Modal Header -->
+        <div class="flex-none h-16 px-5 flex items-center justify-between border-b border-slate-800 bg-slate-900">
+            <button onclick="app.closeModal()" class="text-slate-400 px-2 py-4"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <span class="font-bold text-sm tracking-wider uppercase text-slate-300">Nuovo Ricordo</span>
+            <button onclick="app.saveData()" class="text-violet-400 font-bold text-sm px-2 py-4">SALVA</button>
+        </div>
+
+        <!-- Modal Content (Scrollable form) -->
+        <div class="flex-1 touch-scroll p-5 pb-10">
+            <form id="entryForm" onsubmit="event.preventDefault(); app.saveData();">
+                
+                <!-- Category Grid -->
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-3 block">Categoria</label>
+                <div class="grid grid-cols-4 gap-3 mb-6" id="modalCatGrid"></div>
+
+                <!-- Dynamic Fields Container -->
+                <div id="formFields" class="space-y-5 animate-fade">
+                    <!-- Iniettato via JS -->
+                </div>
+
+            </form>
         </div>
     </div>
 
-    <datalist id="historyTitles"></datalist>
-
+    <!-- Script Logica Applicativa -->
     <script>
-        // --- CONFIG ---
-        const categories = [
-            { id: 'Film', icon: 'fa-film', color: 'text-red-400', border: 'border-red-500' },
-            { id: 'Serie', icon: 'fa-tv', color: 'text-orange-400', border: 'border-orange-500' },
-            { id: 'Libro', icon: 'fa-book', color: 'text-blue-400', border: 'border-blue-500' },
-            { id: 'Teatro', icon: 'fa-masks-theater', color: 'text-pink-400', border: 'border-pink-500' },
-            { id: 'Concerti', icon: 'fa-music', color: 'text-violet-400', border: 'border-violet-500' },
-            { id: 'Lavoro', icon: 'fa-briefcase', color: 'text-slate-400', border: 'border-slate-500' },
-            { id: 'Podcast', icon: 'fa-microphone', color: 'text-purple-400', border: 'border-purple-500' },
-            { id: 'Sport', icon: 'fa-person-running', color: 'text-cyan-400', border: 'border-cyan-500' },
-            { id: 'Sociale', icon: 'fa-users', color: 'text-green-400', border: 'border-green-500' },
-            { id: 'Altro', icon: 'fa-layer-group', color: 'text-gray-400', border: 'border-gray-500' },
-            { id: 'Giornata', icon: 'fa-calendar-day', color: 'text-yellow-400', border: 'border-yellow-500' }
-        ];
-
-        let db = JSON.parse(localStorage.getItem('lifelog_bi_v8')) || [];
-        let currentCat = 'Film';
-        let chartInstances = {};
-        let activeFilters = { cat: 'All', time: 'year', ratings: [], flags: {} };
-        let dashTimeGranularity = 'month';
-
-        // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
-            renderFilterCats();
-            renderModalCategories();
-            document.getElementById('filterTime').value = 'year';
-            applyFilters();
-            updateDatalist();
-            renderDynamicForm('Film'); 
             
-            // Touch Drag Logic for Modal
-            const modalContent = document.getElementById('modalContent');
-            const handle = document.getElementById('dragHandle');
-            let startY = 0;
-            
-            handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; });
-            handle.addEventListener('touchmove', (e) => {
-                const currentY = e.touches[0].clientY;
-                const diff = currentY - startY;
-                if(diff > 0) modalContent.style.transform = `translateY(${diff}px)`;
-            });
-            handle.addEventListener('touchend', (e) => {
-                const endY = e.changedTouches[0].clientY;
-                if(endY - startY > 100) closeModal();
-                else modalContent.style.transform = '';
-            });
-        });
+            const CONFIG = {
+                cats: [
+                    {id: 'Film', icon: 'fa-film', col: 'text-red-400'},
+                    {id: 'Serie', icon: 'fa-tv', col: 'text-orange-400'},
+                    {id: 'Libro', icon: 'fa-book', col: 'text-blue-400'},
+                    {id: 'Lavoro', icon: 'fa-briefcase', col: 'text-slate-400'},
+                    {id: 'Podcast', icon: 'fa-microphone', col: 'text-purple-400'},
+                    {id: 'Sport', icon: 'fa-person-running', col: 'text-cyan-400'},
+                    {id: 'Sociale', icon: 'fa-users', col: 'text-green-400'},
+                    {id: 'Teatro', icon: 'fa-masks-theater', col: 'text-pink-400'},
+                    {id: 'Concerti', icon: 'fa-music', col: 'text-violet-400'},
+                    {id: 'Altro', icon: 'fa-layer-group', col: 'text-gray-400'},
+                    {id: 'Giornata', icon: 'fa-calendar-day', col: 'text-yellow-400'}
+                ]
+            };
 
-        // --- UI UTILS ---
-        function toggleRatingDropdown() { document.getElementById('ratingDropdown').classList.toggle('show'); }
-        function toggleExportMenu() { document.getElementById('exportMenu').classList.toggle('hidden'); }
-        window.onclick = function(e) {
-            if (!e.target.closest('.dropdown-check') && !e.target.closest('#exportMenu') && !e.target.closest('button[onclick="toggleExportMenu()"]')) {
-                document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
-                document.getElementById('exportMenu').classList.add('hidden');
-            }
-        }
+            // --- CORE APPLICATION ---
+            const app = {
+                db: JSON.parse(localStorage.getItem('diario_db_v1')) || [],
+                state: {
+                    view: 'list',
+                    filterCat: 'All',
+                    reportTime: 'month',
+                    modalCat: 'Film'
+                },
 
-        // --- FILTRI ---
-        function renderFilterCats() {
-            const c = document.getElementById('filterCatContainer');
-            let h = `<button onclick="setFilterCat('All')" id="fbtn_All" class="cat-chip-modern active">Tutti</button>`;
-            categories.forEach(cat => {
-                h += `<button onclick="setFilterCat('${cat.id}')" id="fbtn_${cat.id}" class="cat-chip-modern">${cat.id}</button>`;
-            });
-            c.innerHTML = h;
-        }
+                init() {
+                    this.renderFilters();
+                    this.renderList();
+                    this.renderModalCats(); // Pre-render modal
+                    this.updateForm('Film'); // Pre-render form
+                    this.setupFileInput();
+                },
 
-        function setFilterCat(cat) {
-            activeFilters.cat = cat; activeFilters.flags = {}; 
-            document.querySelectorAll('.cat-chip-modern').forEach(b => b.classList.remove('active'));
-            document.getElementById('fbtn_'+cat).classList.add('active');
-            
-            const ratingWrapper = document.getElementById('ratingFilterWrapper');
-            if (cat === 'All' || cat === 'Lavoro' || cat === 'Giornata') ratingWrapper.classList.add('invisible');
-            else ratingWrapper.classList.remove('invisible');
+                // --- NAVIGATION ---
+                switchView(v) {
+                    this.state.view = v;
+                    document.getElementById('view-list').classList.toggle('hidden', v !== 'list');
+                    document.getElementById('view-report').classList.toggle('hidden', v !== 'report');
+                    document.getElementById('fabBtn').classList.toggle('hidden', v !== 'list');
+                    
+                    // Update Nav Buttons
+                    document.querySelectorAll('.nav-btn').forEach(b => {
+                        b.classList.toggle('text-violet-400', b.dataset.v === v);
+                        b.classList.toggle('text-slate-500', b.dataset.v !== v);
+                    });
 
-            renderSpecificFilters(cat); applyFilters();
-        }
+                    if(v === 'report') this.renderReport();
+                },
 
-        function renderSpecificFilters(cat) {
-            const c = document.getElementById('filterSpecifics'); const t = document.getElementById('dynamicFilters'); t.innerHTML = '';
-            let opts = [];
-            if(cat==='Film') opts=[{k:'cinema',l:'Cinema'},{k:'rewatch',l:'Rewatch'}];
-            if(cat==='Serie') opts=[{k:'finished',l:'Finite'},{k:'rewatch',l:'Rewatch'}];
-            if(cat==='Libro') opts=[{k:'finished',l:'Finiti'},{k:'reread',l:'Riletture'}];
-            if(cat==='Lavoro'||cat==='Giornata') opts=[{k:'dayOk',l:'Giornate Sì'}];
+                // --- LIST & FILTERS ---
+                renderFilters() {
+                    const c = document.getElementById('categoryFilterBar');
+                    let h = `<button onclick="window.app.setFilter('All')" class="cat-chip ${this.state.filterCat==='All'?'active':''}">Tutti</button>`;
+                    CONFIG.cats.forEach(cat => {
+                        h += `<button onclick="window.app.setFilter('${cat.id}')" class="cat-chip ${this.state.filterCat===cat.id?'active':''}">${cat.id}</button>`;
+                    });
+                    c.innerHTML = h;
+                },
 
-            if(opts.length>0) {
-                c.classList.remove('hidden'); c.classList.add('flex');
-                t.innerHTML = opts.map(o => `<label class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-3 cursor-pointer text-[11px] font-bold text-slate-300 uppercase select-none hover:bg-slate-700 transition flex-shrink-0"><input type="checkbox" onchange="toggleFlag('${o.k}')" class="w-4 h-4 accent-purple-500 rounded">${o.l}</label>`).join('');
-            } else { c.classList.add('hidden'); c.classList.remove('flex'); }
-        }
+                setFilter(cat) {
+                    this.state.filterCat = cat;
+                    this.renderFilters();
+                    this.renderList();
+                    if(this.state.view === 'report') this.renderReport();
+                },
 
-        function toggleFlag(k) { activeFilters.flags[k] = !activeFilters.flags[k]; applyFilters(); }
-        
-        function updateRatingFilter() {
-            const checks = document.querySelectorAll('.rating-check:checked');
-            activeFilters.ratings = Array.from(checks).map(c => parseInt(c.value));
-            document.getElementById('ratingBtnLabel').innerText = activeFilters.ratings.length ? activeFilters.ratings.length + " sel." : "Voti";
-            applyFilters();
-        }
+                renderList() {
+                    const list = document.getElementById('view-list');
+                    let data = this.db.sort((a,b) => new Date(b.date) - new Date(a.date));
+                    
+                    if(this.state.filterCat !== 'All') {
+                        data = data.filter(i => i.cat === this.state.filterCat);
+                    }
 
-        function resetFilters() {
-            activeFilters = {cat:'All',time:'year',ratings:[],flags:{}};
-            document.getElementById('filterTime').value='year';
-            document.querySelectorAll('.rating-check').forEach(c=>c.checked=false);
-            updateRatingFilter();
-            setFilterCat('All');
-        }
+                    if(data.length === 0) {
+                        list.innerHTML = `<div class="flex flex-col items-center justify-center h-64 text-slate-600 space-y-4">
+                            <i class="fa-solid fa-ghost text-4xl opacity-50"></i>
+                            <p class="text-xs uppercase font-bold tracking-widest">Nessun Ricordo</p>
+                        </div>`;
+                        return;
+                    }
 
-        function applyFilters() {
-            activeFilters.time = document.getElementById('filterTime').value;
-            const now = new Date();
-            let filtered = db.filter(i => {
-                if(activeFilters.cat!=='All' && i.cat!==activeFilters.cat) return false;
-                if(activeFilters.ratings.length && !activeFilters.ratings.includes(i.rating)) return false;
-                const d = new Date(i.date);
-                if(activeFilters.time==='today' && d.setHours(0,0,0,0)!==now.setHours(0,0,0,0)) return false;
-                if(activeFilters.time==='week' && (now-d)>604800000) return false;
-                if(activeFilters.time==='month' && (d.getMonth()!==now.getMonth()||d.getFullYear()!==now.getFullYear())) return false;
-                if(activeFilters.time==='year' && d.getFullYear()!==now.getFullYear()) return false;
-                for(let [k,v] of Object.entries(activeFilters.flags)) {
-                     if(v && (!i.meta || !i.meta[k])) return false;
-                     if(k==='dayOk' && v && i.meta.dayOk!=='Sì') return false;
+                    list.innerHTML = data.map(item => {
+                        const catObj = CONFIG.cats.find(c => c.id === item.cat) || CONFIG.cats[9];
+                        const d = new Date(item.date);
+                        const dateStr = `${d.getDate()}/${d.getMonth()+1}`;
+                        
+                        let metaBadges = '';
+                        if(item.meta?.cinema) metaBadges += `<span class="bg-red-500/20 text-red-300 text-[9px] px-1.5 rounded font-bold ml-2">CINEMA</span>`;
+                        if(item.meta?.rewatch || item.meta?.reread) metaBadges += `<span class="bg-blue-500/20 text-blue-300 text-[9px] px-1.5 rounded font-bold ml-2">REW</span>`;
+                        
+                        // Rating visual
+                        let stars = '';
+                        if(item.rating > 0) {
+                            stars = `<div class="flex gap-0.5 text-[9px] text-yellow-500 ml-auto">`;
+                            for(let i=0; i<item.rating; i++) stars += '<i class="fa-solid fa-star"></i>';
+                            stars += `</div>`;
+                        }
+
+                        return `
+                        <div class="glass-panel rounded-2xl p-4 flex gap-4 items-center">
+                            <div class="flex flex-col items-center min-w-[40px]">
+                                <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 ${catObj.col}">
+                                    <i class="fa-solid ${catObj.icon}"></i>
+                                </div>
+                                <span class="text-[9px] text-slate-500 font-mono mt-1">${dateStr}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-center mb-0.5">
+                                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wide">${item.cat}</span>
+                                    ${stars}
+                                </div>
+                                <h3 class="font-bold text-sm text-white truncate leading-tight">${item.title} ${metaBadges}</h3>
+                                <p class="text-xs text-slate-400 mt-1 truncate opacity-80">${item.notes || '...'}</p>
+                            </div>
+                            <button onclick="window.app.deleteItem(${item.id})" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-red-400 active:scale-90 transition">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>`;
+                    }).join('');
+                },
+
+                // --- MODAL & FORM LOGIC ---
+                openModal() {
+                    // Set default date
+                    const now = new Date();
+                    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                    this.defaultDate = now.toISOString().slice(0,16);
+                    
+                    document.getElementById('modalOverlay').classList.add('open');
+                    this.updateForm(this.state.modalCat); // Render current form
+                },
+
+                closeModal() {
+                    document.getElementById('modalOverlay').classList.remove('open');
+                },
+
+                renderModalCats() {
+                    const grid = document.getElementById('modalCatGrid');
+                    grid.innerHTML = CONFIG.cats.map(c => `
+                        <div onclick="window.app.setModalCat('${c.id}')" class="cat-select-btn flex flex-col items-center justify-center h-20 rounded-xl bg-slate-800 border border-slate-700 text-slate-500 transition active:scale-95 ${this.state.modalCat === c.id ? 'active-cat' : ''}" id="mcat_${c.id}">
+                            <i class="fa-solid ${c.icon} text-xl mb-1 pointer-events-none"></i>
+                            <span class="text-[9px] font-bold uppercase pointer-events-none">${c.id}</span>
+                        </div>
+                    `).join('');
+                    
+                    // Add CSS class dynamically if not exists
+                    if(!document.getElementById('dynamic-style')) {
+                        const style = document.createElement('style');
+                        style.id = 'dynamic-style';
+                        style.innerHTML = `.active-cat { background-color: #7c3aed !important; border-color: #a78bfa !important; color: white !important; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4); }`;
+                        document.head.appendChild(style);
+                    }
+                },
+
+                setModalCat(id) {
+                    this.state.modalCat = id;
+                    document.querySelectorAll('.cat-select-btn').forEach(b => b.classList.remove('active-cat'));
+                    document.getElementById('mcat_'+id).classList.add('active-cat');
+                    this.updateForm(id);
+                },
+
+                updateForm(cat) {
+                    const f = document.getElementById('formFields');
+                    // Componenti riutilizzabili
+                    const dateHtml = `<div><label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Data</label><input type="datetime-local" name="date" class="w-full h-12 bg-slate-800 border border-slate-700 rounded-xl px-4 text-sm text-white focus:border-violet-500 outline-none" value="${this.defaultDate}"></div>`;
+                    const titleHtml = (ph) => `<div><label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Titolo / Oggetto</label><input type="text" name="title" placeholder="${ph}" class="w-full h-12 bg-slate-800 border border-slate-700 rounded-xl px-4 text-sm text-white focus:border-violet-500 outline-none"></div>`;
+                    const notesHtml = `<div><label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Note</label><textarea name="notes" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-sm text-white focus:border-violet-500 outline-none"></textarea></div>`;
+                    const ratingHtml = `<div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center"><span class="text-xs font-bold text-slate-400 uppercase">Voto</span><div class="flex gap-2">${[1,2,3,4,5].map(v => `<label class="cursor-pointer"><input type="radio" name="rating" value="${v}" class="hidden peer"><i class="fa-solid fa-star text-2xl text-slate-700 peer-checked:text-yellow-400 transition"></i></label>`).join('')}</div></div>`;
+                    
+                    // Helper toggle
+                    const toggle = (name, label) => `<label class="flex items-center gap-3 bg-slate-800 p-3 rounded-xl border border-slate-700"><input type="checkbox" name="${name}" class="w-5 h-5 accent-violet-500 rounded"><span class="text-xs font-bold text-slate-300 select-none">${label}</span></label>`;
+                    
+                    let content = dateHtml;
+
+                    if(cat === 'Film') {
+                        content += titleHtml("Titolo del film");
+                        content += `<div class="flex gap-3">${toggle('cinema','Al Cinema')} ${toggle('rewatch','Già Visto')}</div>`;
+                        content += ratingHtml;
+                    } else if (cat === 'Serie') {
+                        content += titleHtml("Titolo Serie");
+                        content += `<div class="flex gap-3"><input type="number" name="season" placeholder="S" class="w-20 h-12 bg-slate-800 border-slate-700 rounded-xl text-center text-white"><input type="number" name="episode" placeholder="Ep" class="w-20 h-12 bg-slate-800 border-slate-700 rounded-xl text-center text-white"></div>`;
+                        content += `<div class="flex gap-3">${toggle('finished','Finita')}</div>`;
+                        content += ratingHtml;
+                    } else if (cat === 'Lavoro') {
+                        content += titleHtml("Progetto / Task");
+                        content += `<div><label class="text-xs text-slate-500 mb-1 block">Produttività</label><input type="range" name="productivity" min="0" max="10" step="1" value="5"></div>`;
+                        content += `<div><label class="text-xs text-slate-500 mb-1 block">Rottura</label><input type="range" name="annoyance" min="0" max="10" step="1" value="2"></div>`;
+                        content += `<div class="flex gap-2"><label class="flex-1 bg-slate-800 p-3 rounded-xl text-center border border-slate-700"><input type="radio" name="dayOk" value="Sì" class="hidden peer"><span class="text-xs font-bold text-slate-400 peer-checked:text-green-400">👍 Ottima</span></label><label class="flex-1 bg-slate-800 p-3 rounded-xl text-center border border-slate-700"><input type="radio" name="dayOk" value="No" class="hidden peer"><span class="text-xs font-bold text-slate-400 peer-checked:text-red-400">👎 Pessima</span></label></div>`;
+                    } else if (cat === 'Giornata') {
+                        content += `<div><label class="text-xs text-slate-500 mb-1 block">Mood Generale (1-5)</label><input type="range" name="rating" min="1" max="5" step="1" value="3"></div>`;
+                        content += `<div class="flex gap-2"><label class="flex-1 bg-slate-800 p-3 rounded-xl text-center border border-slate-700"><input type="radio" name="dayOk" value="Sì" class="hidden peer"><span class="text-xs font-bold text-slate-400 peer-checked:text-green-400">👍 Sì</span></label><label class="flex-1 bg-slate-800 p-3 rounded-xl text-center border border-slate-700"><input type="radio" name="dayOk" value="No" class="hidden peer"><span class="text-xs font-bold text-slate-400 peer-checked:text-red-400">👎 No</span></label></div>`;
+                    } else {
+                        // Default generic
+                        content += titleHtml(`Dettagli ${cat}`);
+                        if(cat === 'Teatro' || cat === 'Concerti' || cat === 'Altro') {
+                            content += `<div><label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Luogo</label><input type="text" name="place" class="w-full h-12 bg-slate-800 border border-slate-700 rounded-xl px-4 text-sm text-white outline-none"></div>`;
+                        }
+                        content += ratingHtml;
+                    }
+
+                    content += notesHtml;
+                    f.innerHTML = content;
+                },
+
+                // --- SAVING ---
+                saveData() {
+                    const form = document.getElementById('entryForm');
+                    if(!form) return;
+                    
+                    const formData = new FormData(form);
+                    const obj = Object.fromEntries(formData.entries());
+                    
+                    // Costruzione Oggetto Sicuro
+                    const newEntry = {
+                        id: Date.now(),
+                        date: obj.date || new Date().toISOString(),
+                        cat: this.state.modalCat,
+                        title: obj.title || (this.state.modalCat === 'Giornata' ? 'Diario' : 'Senza Titolo'),
+                        rating: parseInt(obj.rating) || 0,
+                        notes: obj.notes || '',
+                        meta: {
+                            cinema: form.querySelector('[name="cinema"]')?.checked || false,
+                            rewatch: form.querySelector('[name="rewatch"]')?.checked || false,
+                            finished: form.querySelector('[name="finished"]')?.checked || false,
+                            season: obj.season || '',
+                            episode: obj.episode || '',
+                            productivity: obj.productivity || '',
+                            annoyance: obj.annoyance || '',
+                            dayOk: obj.dayOk || '',
+                            place: obj.place || ''
+                        }
+                    };
+
+                    this.db.unshift(newEntry);
+                    this.persist();
+                    
+                    // UI Feedback
+                    this.closeModal();
+                    confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
+                    this.renderList();
+                    this.setSaveStatus("Salvato!");
+                },
+
+                deleteItem(id) {
+                    if(confirm("Eliminare?")) {
+                        this.db = this.db.filter(i => i.id !== id);
+                        this.persist();
+                        this.renderList();
+                    }
+                },
+
+                persist() {
+                    localStorage.setItem('diario_db_v1', JSON.stringify(this.db));
+                },
+
+                setSaveStatus(msg) {
+                    const el = document.getElementById('statusMsg');
+                    if(el) {
+                        const orig = el.innerText;
+                        el.innerText = msg;
+                        el.classList.add('text-green-400');
+                        setTimeout(() => {
+                            el.innerText = "Pronto";
+                            el.classList.remove('text-green-400');
+                        }, 2000);
+                    }
+                },
+
+                // --- REPORT ---
+                setReportTime(t) {
+                    this.state.reportTime = t;
+                    document.querySelectorAll('.report-time-btn').forEach(b => {
+                        b.className = `report-time-btn flex-1 py-1.5 text-[10px] font-bold uppercase rounded text-center transition ${b.dataset.t === t ? 'bg-slate-600 text-white shadow' : 'text-slate-400'}`;
+                    });
+                    this.renderReport();
+                },
+
+                renderReport() {
+                    const ctx = document.getElementById('reportContent');
+                    const data = this.db; 
+                    
+                    const total = data.length;
+                    const avgRating = (data.reduce((a,b)=>a+b.rating,0)/(total||1)).toFixed(1);
+
+                    ctx.innerHTML = `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="glass-panel p-4 rounded-2xl border-l-4 border-violet-500">
+                                <div class="text-[10px] uppercase text-slate-400 font-bold">Totale</div>
+                                <div class="text-3xl font-black text-white">${total}</div>
+                            </div>
+                            <div class="glass-panel p-4 rounded-2xl border-l-4 border-fuchsia-500">
+                                <div class="text-[10px] uppercase text-slate-400 font-bold">Media Voto</div>
+                                <div class="text-3xl font-black text-white">${avgRating}</div>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-4 rounded-2xl h-64 flex items-center justify-center text-slate-500 text-xs">
+                            <i class="fa-solid fa-chart-simple text-4xl mb-2 opacity-20 block"></i>
+                            Grafici temporali disponibili in futuro...
+                        </div>
+                    `;
+                },
+
+                setupFileInput() {
+                    const fi = document.getElementById('fileInput');
+                    if(fi) {
+                        fi.addEventListener('change', (e) => {
+                            const file = e.target.files[0];
+                            if(!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (evt) => {
+                                try {
+                                    if(file.name.endsWith('.json')) {
+                                        this.db = JSON.parse(evt.target.result);
+                                        this.persist();
+                                        this.init();
+                                        alert("Ripristino completato!");
+                                    } else {
+                                        alert("Formato non supportato. Usa JSON.");
+                                    }
+                                } catch(err) { alert("Errore file"); }
+                            };
+                            reader.readAsText(file);
+                        });
+                    }
+                },
+
+                // --- HANDLERS ESTERNI ---
+                handlers: {
+                    export: () => {
+                        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app.db));
+                        const downloadAnchorNode = document.createElement('a');
+                        downloadAnchorNode.setAttribute("href",     dataStr);
+                        downloadAnchorNode.setAttribute("download", "diario_backup.json");
+                        document.body.appendChild(downloadAnchorNode);
+                        downloadAnchorNode.click();
+                        downloadAnchorNode.remove();
+                    },
+                    import: () => document.getElementById('fileInput').click()
                 }
-                return true;
-            });
-            document.getElementById('filterCountDisplay').innerText = filtered.length;
-            renderList(filtered);
-            // Forza aggiornamento dashboard se visibile
-            if(!document.getElementById('viewDash').classList.contains('hidden')) {
-                renderDashboard(filtered);
-            }
-            return filtered;
-        }
+            };
 
-        // --- RENDER LIST ---
-        function renderList(data) {
-            const list = document.getElementById('entriesList');
-            data.sort((a,b)=>new Date(b.date)-new Date(a.date));
-            if(data.length===0) { list.innerHTML=`<div class="text-center text-slate-600 mt-20 opacity-50"><i class="fa-solid fa-ghost text-4xl mb-3"></i><p class="text-xs">Nessun dato trovato</p></div>`; return; }
-            list.innerHTML = data.map(i => {
-                const c = categories.find(x=>x.id===i.cat)||categories[0];
-                const d = new Date(i.date);
-                let det='', ext='', stars='';
-                if(i.cat==='Serie') { det=`S${i.meta.season}:E${i.meta.episode}`; if(i.meta.finished) ext+=`<span class="bg-green-500/20 text-green-300 text-[9px] px-1.5 py-0.5 rounded ml-1 font-bold">FIN</span>`; }
-                if(i.cat==='Libro') { det=`Pag.${i.meta.page||'?'}`; if(i.meta.finished) ext+=`<span class="bg-green-500/20 text-green-300 text-[9px] px-1.5 py-0.5 rounded ml-1 font-bold">FIN</span>`; }
-                if(i.cat==='Lavoro') { det=`Prod:${i.meta.productivity}/10`; if(i.meta.dayOk==='Sì') ext+=` 👍`; }
-                if(i.cat==='Giornata') { det=i.meta.dayOk==='Sì'?'Giornata Ottima':'Giornata No'; }
-                if(i.cat==='Podcast') det = i.meta.epTitle || ''; if(i.cat==='Sport') det = i.meta.subEvent || '';
-                if(i.cat==='Teatro'||i.cat==='Concerti'||i.cat==='Altro') det = i.meta.place || '';
-                if(i.meta.cinema) ext+=`<span class="bg-red-500/20 text-red-300 text-[9px] px-1.5 py-0.5 rounded ml-1 font-bold">CINEMA</span>`;
-                if(i.meta.rewatch || i.meta.reread) ext+=`<span class="bg-blue-500/20 text-blue-300 text-[9px] px-1.5 py-0.5 rounded ml-1 font-bold">REW</span>`;
-                if(i.rating>0) for(let s=0;s<5;s++) stars+=s<i.rating?'<i class="fa-solid fa-star text-yellow-400 text-[10px]"></i>':'<i class="fa-solid fa-star text-slate-700 text-[10px]"></i>';
-
-                return `<div class="glass p-4 rounded-2xl flex gap-4 items-center border border-slate-700/50 hover:bg-slate-800/50 transition"><div class="flex flex-col items-center min-w-[45px]"><div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center mb-1 border border-slate-700 text-lg shadow-inner ${c.color}"><i class="fa-solid ${c.icon}"></i></div><span class="text-[9px] text-slate-500 font-mono mt-1">${d.getDate()}/${d.getMonth()+1}</span></div><div class="flex-1 min-w-0"><div class="flex justify-between items-start"><span class="text-[9px] text-slate-500 font-bold uppercase tracking-wide">${c.id}</span><div class="flex gap-0.5">${stars}</div></div><h3 class="font-bold text-sm text-white truncate pr-2 mt-0.5">${i.title||i.cat} ${ext}</h3>${det ? `<div class="text-[11px] text-purple-300 font-medium mt-0.5 truncate">${det}</div>` : ''}${i.notes ? `<p class="text-[10px] text-slate-400 mt-1.5 line-clamp-1 italic">"${i.notes}"</p>` : ''}</div><button onclick="deleteEntry(${i.id})" class="text-slate-700 hover:text-red-500 p-3"><i class="fa-solid fa-trash text-sm"></i></button></div>`;
-            }).join('');
-        }
-
-        // --- DASHBOARD LOGIC ---
-        function renderDashboard(data) {
-            const catFilter = activeFilters.cat;
-            const container = document.getElementById('dashContent');
-            const kpi = (lbl, val, sub, col, icon) => `<div class="glass p-4 rounded-2xl border-l-4 border-${col}-500 flex flex-col justify-between relative overflow-hidden shadow-lg min-h-[100px]"><div class="flex justify-between items-start z-10"><span class="text-[10px] uppercase text-slate-400 font-extrabold tracking-widest">${lbl}</span>${icon ? `<i class="fa-solid ${icon} text-slate-600 text-sm"></i>` : ''}</div><div class="text-3xl font-black text-white mt-1 z-10">${val}</div>${sub ? `<div class="text-[10px] text-slate-500 z-10 font-medium">${sub}</div>` : ''}<div class="absolute -bottom-4 -right-4 text-7xl opacity-5 text-${col}-500"><i class="fa-solid fa-circle"></i></div></div>`;
-            let html = '';
-            const periodLabel = document.getElementById('filterTime').options[document.getElementById('filterTime').selectedIndex].text;
-
-            if (catFilter === 'All') {
-                if(!data) data = applyFilters();
-                const count = (c) => data.filter(i => i.cat === c).length;
-                const work = data.filter(i => i.cat === 'Lavoro');
-                const workPct = work.length ? Math.round((work.filter(i => i.meta.dayOk === 'Sì').length/work.length)*100) : 0;
-                const day = data.filter(i => i.cat === 'Giornata');
-                const dayPct = day.length ? Math.round((day.filter(i => i.meta.dayOk === 'Sì').length/day.length)*100) : 0;
-
-                html = `<div class="mb-4 flex items-center gap-2"><div class="w-1 h-4 bg-purple-500 rounded-full"></div><h2 class="text-xs font-bold text-slate-300 uppercase tracking-widest">Riepilogo: ${periodLabel}</h2></div><div class="grid grid-cols-2 gap-4">${kpi("Film", count('Film'), "Visti", "red", "fa-film")}${kpi("Serie TV", count('Serie'), "Episodi", "orange", "fa-tv")}${kpi("Libri", count('Libro'), "Letti", "blue", "fa-book")}${kpi("Teatro", count('Teatro'), "Spettacoli", "pink", "fa-masks-theater")}${kpi("Concerti", count('Concerti'), "Eventi", "violet", "fa-music")}${kpi("Podcast", count('Podcast'), "Puntate", "purple", "fa-microphone")}${kpi("Sport", count('Sport'), "Attività", "cyan", "fa-person-running")}${kpi("Sociale", count('Sociale'), "Uscite", "green", "fa-users")}${kpi("Lavoro OK", workPct + "%", `Su ${work.length} gg`, "slate", "fa-briefcase")}${kpi("Mood OK", dayPct + "%", `Su ${day.length} gg`, "yellow", "fa-calendar-day")}</div>`;
-                document.getElementById('dashTimeControls').classList.add('hidden');
-            } else {
-                document.getElementById('dashTimeControls').classList.remove('hidden');
-                if(!data) data = applyFilters(); 
-                const count = data.length;
-                const avg = (data.reduce((a,b)=>a+b.rating,0)/(count||1)).toFixed(1);
-                const chartBox = (id, h, title) => `<div class="glass p-4 rounded-2xl mb-6 shadow-lg"><h3 class="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-wider">${title}</h3><div class="h-${h}"><canvas id="${id}"></canvas></div></div>`;
-                
-                html += `<div class="grid grid-cols-2 gap-4 mb-6">${kpi("Totale", count, periodLabel, "purple")}${kpi("Media Voto", avg, "Su 5 stelle", "yellow")}</div>`;
-                // ... (Logic for charts remains same, using data variable) ...
-                if(catFilter==='Film') html+=`<div class="grid grid-cols-2 gap-4 mb-6"><div class="glass p-2 rounded-2xl h-40 relative"><canvas id="chPieLoc"></canvas></div><div class="glass p-2 rounded-2xl h-40 relative"><canvas id="chPieRew"></canvas></div></div>${chartBox("chBarTime", "48", "Trend")}${chartBox("chBarRate", "32", "Voti")}`;
-                else if(catFilter==='Serie') html+=`<div class="grid grid-cols-2 gap-4 mb-6"><div class="glass p-2 rounded-2xl h-40 relative"><canvas id="chPieRew"></canvas></div>${kpi("Finite", data.filter(i=>i.meta.finished).length, "Concluse", "green")}</div>${chartBox("chBarTime", "48", "Trend")}${chartBox("chBarRate", "32", "Voti")}`;
-                else if(catFilter==='Libro') html+=`<div class="grid grid-cols-2 gap-4 mb-6"><div class="glass p-2 rounded-2xl h-40 relative"><canvas id="chPieRew"></canvas></div>${kpi("Finiti", data.filter(i=>i.meta.finished).length, "Conclusi", "green")}</div>${chartBox("chBarTime", "48", "Trend")}${chartBox("chBarRate", "32", "Voti")}`;
-                else if(catFilter==='Lavoro') html+=`<div class="grid grid-cols-2 gap-4 mb-6"><div class="glass p-2 rounded-2xl h-40 relative"><canvas id="chPieDay"></canvas></div>${kpi("Rottura", (data.reduce((a,b)=>a+parseInt(b.meta.annoyance||0),0)/(count||1)).toFixed(1), "Media (0-10)", "red")}</div>${chartBox("chLineWork", "56", "Produttività vs Rottura")}`;
-                else if(catFilter==='Giornata') html+=`<div class="grid grid-cols-2 gap-4 mb-6"><div class="glass p-2 rounded-2xl h-40 relative"><canvas id="chPieDay"></canvas></div>${kpi("Mood", avg, "Media (1-5)", "yellow")}</div>${chartBox("chLineMood", "48", "Andamento Umore")}`;
-                else html+=`${chartBox("chBarTime", "48", "Trend")}${chartBox("chBarRate", "32", "Voti")}`;
-            }
-            container.innerHTML = html;
-            if(catFilter !== 'All') { setTimeout(() => { renderCharts(data, catFilter); }, 50); }
-        }
-
-        // --- CHARTS ---
-        function renderCharts(data, cat) {
-             const grouped = aggregateDataByTime(data, dashTimeGranularity);
-            if(document.getElementById('chBarTime')) mkChart('chBarTime','bar',Object.keys(grouped).reverse(),[{label:'Qta',data:Object.values(grouped).reverse(),backgroundColor:'#a855f7',borderRadius:6}]);
-            if(document.getElementById('chBarRate')) { const r=[0,0,0,0,0]; data.forEach(i=>{if(i.rating>0&&i.rating<=5)r[i.rating-1]++}); mkChart('chBarRate','bar',['1','2','3','4','5'],[{label:'Voti',data:r,backgroundColor:'#eab308',borderRadius:4}]); }
-            if(cat==='Film') { mkPie('chPieLoc',['Cinema','Casa'],[data.filter(i=>i.meta.cinema).length, data.length-data.filter(i=>i.meta.cinema).length],['#ef4444','#334155']); mkPie('chPieRew',['Rewatch','Nuovi'],[data.filter(i=>i.meta.rewatch).length, data.length-data.filter(i=>i.meta.rewatch).length],['#3b82f6','#334155']); }
-            if(cat==='Serie'||cat==='Libro') { const k = cat==='Libro'?'reread':'rewatch'; mkPie('chPieRew',[cat==='Libro'?'Riletti':'Rewatch','Nuovi'],[data.filter(i=>i.meta[k]).length, data.length-data.filter(i=>i.meta[k]).length],['#3b82f6','#334155']); }
-            if(cat==='Lavoro'||cat==='Giornata') { mkPie('chPieDay',['Sì','No'],[data.filter(i=>i.meta.dayOk==='Sì').length, data.filter(i=>i.meta.dayOk!=='Sì').length],['#22c55e','#ef4444']); }
-            if(cat==='Lavoro') { const s = [...data].sort((a,b)=>new Date(a.date)-new Date(b.date)); mkChart('chLineWork','line',s.map(i=>i.date.slice(5,10)),[{label:'Prod',data:s.map(i=>i.meta.productivity),borderColor:'#3b82f6',tension:0.3,pointRadius:0},{label:'Rott',data:s.map(i=>i.meta.annoyance),borderColor:'#ef4444',tension:0.3,pointRadius:0}]); }
-            if(cat==='Giornata') { const s = [...data].sort((a,b)=>new Date(a.date)-new Date(b.date)); mkChart('chLineMood','line',s.map(i=>i.date.slice(5,10)),[{label:'Mood',data:s.map(i=>i.rating),borderColor:'#eab308',tension:0.4}]); }
-        }
-        function setDashTime(t){dashTimeGranularity=t;document.querySelectorAll('.time-toggle-btn').forEach(b=>b.classList.remove('active'));document.getElementById('dt_'+t).classList.add('active');renderDashboard();}
-        function aggregateDataByTime(data,g){const gr={};data.forEach(i=>{const d=new Date(i.date);let k='';if(g==='day')k=d.getDate()+'/'+(d.getMonth()+1);else if(g==='month')k=(d.getMonth()+1)+'/'+d.getFullYear().toString().slice(-2);else if(g==='year')k=d.getFullYear();else{const s=new Date(d.getFullYear(),0,1);k='W'+Math.ceil((((d-s)/86400000)+1)/7);}gr[k]=(gr[k]||0)+1;});return gr;}
-        function mkChart(id,t,l,ds){if(chartInstances[id])chartInstances[id].destroy();const ctx=document.getElementById(id).getContext('2d');Chart.defaults.color='#64748b';Chart.defaults.borderColor='rgba(255,255,255,0.05)';chartInstances[id]=new Chart(ctx,{type:t,data:{labels:l,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:t!=='pie'},y:{display:t!=='pie',beginAtZero:true}}}});}
-        function mkPie(id,l,d,c){if(chartInstances[id])chartInstances[id].destroy();const ctx=document.getElementById(id).getContext('2d');chartInstances[id]=new Chart(ctx,{type:'doughnut',data:{labels:l,datasets:[{data:d,backgroundColor:c,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'75%',plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:9},color:'#94a3b8'}}}}});}
-        
-        // --- MODAL & FORM ---
-        function openModal(){document.getElementById('addModal').classList.remove('hidden');renderModalCategories();setModalCategory('Film');}
-        function closeModal(){
-             document.getElementById('modalContent').style.transform = ''; // Reset drag
-             document.getElementById('addModal').classList.add('hidden');
-        }
-        function setModalCategory(cat) { currentCat = cat; document.querySelectorAll('.modal-cat-item').forEach(el=>el.classList.remove('selected')); document.getElementById('mod_'+cat).classList.add('selected'); renderDynamicForm(cat); }
-        function renderModalCategories() { document.getElementById('modalCatContainer').innerHTML = categories.map(c => `<div onclick="setModalCategory('${c.id}')" id="mod_${c.id}" class="modal-cat-item ${currentCat===c.id?'selected':''}"><i class="fa-solid ${c.icon} text-2xl mb-2"></i><span class="text-[9px] font-bold uppercase">${c.id}</span></div>`).join(''); }
-        function renderDynamicForm(cat) {
-            const f = document.getElementById('dynamicForm');
-            let h = `<div><label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Data</label><input type="datetime-local" id="inpDate" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl p-4 text-sm text-white outline-none focus:border-purple-500 transition h-14"></div>`;
-            const txt = (l,p) => `<div><label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">${l}</label><input type="text" id="inpTitle" list="historyTitles" placeholder="${p}" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl p-4 text-sm text-white outline-none focus:border-purple-500 transition h-14"></div>`;
-            const sub = (id,l,p) => `<div><label class="text-[9px] font-bold text-slate-500 uppercase mb-2 block">${l}</label><input type="text" id="${id}" placeholder="${p}" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl p-3 text-sm text-white outline-none focus:border-purple-500 transition h-12"></div>`;
-            const rate = `<div><label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Voto</label><div class="flex justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-600">${[1,2,3,4,5].map(i=>`<i onclick="setRating(${i})" class="fa-star cursor-pointer text-2xl text-slate-600 hover:text-yellow-400 transition fa-solid star-icon" data-val="${i}"></i>`).join('')}</div><input type="hidden" id="inpRating" value="0"></div>`;
-            const chk = (id,l) => `<div class="flex items-center gap-3 bg-slate-800/50 p-4 rounded-xl border border-slate-600 flex-1 cursor-pointer hover:bg-slate-700 transition"><input type="checkbox" id="${id}" class="w-5 h-5 accent-purple-500 rounded"><label for="${id}" class="text-xs font-bold select-none cursor-pointer">${l}</label></div>`;
-            const note = `<div><label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Note</label><textarea id="inpNotes" rows="3" class="w-full bg-slate-800/50 border border-slate-600 rounded-xl p-4 text-sm text-white outline-none focus:border-purple-500 transition"></textarea></div>`;
-            const sld = (id,l,val) => `<div><label class="text-[10px] font-bold text-slate-400 uppercase mb-3 block flex justify-between"><span>${l}</span> <span id="lbl_${id}" class="text-purple-400 font-mono text-sm">${val}</span></label><input type="range" id="${id}" min="0" max="10" step="1" value="${val}" oninput="document.getElementById('lbl_${id}').innerText=this.value"></div>`;
-            const dayOk = `<div><label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Com'è andata?</label><div class="flex gap-2"><button onclick="setDayOk('Sì',this)" class="day-btn flex-1 py-4 bg-slate-800 border border-slate-600 rounded-xl text-sm font-bold hover:bg-green-900/40 transition">👍 Sì</button><button onclick="setDayOk('No',this)" class="day-btn flex-1 py-4 bg-slate-800 border border-slate-600 rounded-xl text-sm font-bold hover:bg-red-900/40 transition">👎 No</button></div><input type="hidden" id="inpDayOk" value=""></div>`;
-            
-            if(cat==='Film') h+=`${txt("Titolo Film","Es. Inception")} <div class="flex gap-2 mt-4 mb-4">${chk("inpCinema","Cinema")} ${chk("inpRewatch","Rewatch")}</div> ${rate}`;
-            else if(cat==='Serie') h+=`${txt("Titolo Serie","Es. Breaking Bad")} <div class="flex gap-2 mt-4"><div class="flex-1">${sub("inpSeason","S","1")}</div><div class="flex-1">${sub("inpEpisode","Ep","1")}</div></div><div class="flex gap-2 mt-4 mb-4">${chk("inpFinished","Finita")} ${chk("inpRewatch","Rewatch")}</div> ${rate}`;
-            else if(cat==='Libro') h+=`${txt("Titolo Libro","Es. 1984")} <div class="flex gap-2 mt-4">${sub("inpPage","Pagina","120")}</div> <div class="flex gap-2 mt-4 mb-4">${chk("inpFinished","Finito")} ${chk("inpReread","Rilettura")}</div> ${rate}`;
-            else if(cat==='Lavoro') h+=`${txt("Progetto","Es. Dev")} ${sld("inpProd","Produttività",7)} ${sld("inpAnnoy","Rottura",2)} ${dayOk}`;
-            else if(cat==='Giornata') h+=`${dayOk} ${sld("inpMood","Mood",3)}`;
-            else if(cat==='Altro') h+=`${txt("Titolo","Es. Evento")} ${sub("inpPlace","Luogo","Es. Roma")} ${rate}`;
-            else h+=`${txt("Titolo","Descrizione")} ${rate}`; 
-            
-            h+=note; f.innerHTML=h;
-            const now=new Date(); now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
-            document.getElementById('inpDate').value=now.toISOString().slice(0,16);
-        }
-
-        // --- SAFE SAVE ENTRY ---
-        function saveEntry() {
-            try {
-                const rd = document.getElementById('inpDate')?.value;
-                const meta = {};
-                // Helper sicuro per leggere valori
-                const getVal = (id) => document.getElementById(id)?.value;
-                const getChk = (id) => document.getElementById(id)?.checked;
-
-                if(document.getElementById('inpCinema')) meta.cinema = getChk('inpCinema');
-                if(document.getElementById('inpRewatch')) meta.rewatch = getChk('inpRewatch');
-                if(document.getElementById('inpFinished')) meta.finished = getChk('inpFinished');
-                if(document.getElementById('inpReread')) meta.reread = getChk('inpReread');
-                if(document.getElementById('inpSeason')) { meta.season=getVal('inpSeason'); meta.episode=getVal('inpEpisode'); }
-                if(document.getElementById('inpPage')) meta.page=getVal('inpPage');
-                if(document.getElementById('inpProd')) { meta.productivity=getVal('inpProd'); meta.annoyance=getVal('inpAnnoy'); }
-                if(document.getElementById('inpDayOk')) meta.dayOk=getVal('inpDayOk');
-                if(document.getElementById('inpMood')) { meta.mood=getVal('inpMood'); } 
-                if(document.getElementById('inpPlace')) meta.place=getVal('inpPlace');
-                if(document.getElementById('inpEpTitle')) meta.epTitle=getVal('inpEpTitle');
-                if(document.getElementById('inpSubEvent')) meta.subEvent=getVal('inpSubEvent');
-
-                let rating = parseInt(getVal('inpRating')||0);
-                if(currentCat==='Giornata') rating = parseInt(meta.mood);
-
-                const titleVal = getVal('inpTitle');
-                const e = {
-                    id: Date.now(),
-                    date: rd ? new Date(rd).toISOString() : new Date().toISOString(),
-                    cat: currentCat,
-                    title: titleVal ? titleVal : (currentCat==='Giornata'?'Diario':currentCat),
-                    rating: rating,
-                    notes: getVal('inpNotes')||'',
-                    meta: meta
-                };
-                db.unshift(e); triggerAutoSave(); closeModal(); confetti({particleCount:100,spread:70,origin:{y:0.6}}); applyFilters();
-            } catch (err) {
-                alert("Errore nel salvataggio: " + err.message);
-                console.error(err);
-            }
-        }
-        
-        // --- UTILS & HELPERS ---
-        function setRating(v){document.getElementById('inpRating').value=v;document.querySelectorAll('.star-icon').forEach((e,i)=>i<v?e.classList.replace('text-slate-600','text-yellow-400'):e.classList.replace('text-yellow-400','text-slate-600'));}
-        function setDayOk(v,b){document.getElementById('inpDayOk').value=v;document.querySelectorAll('.day-btn').forEach(x=>x.classList.remove('ring-2','ring-purple-500','bg-slate-700'));b.classList.add('ring-2','ring-purple-500','bg-slate-700');}
-        
-        // --- RESTO CODICE INVARIATO (Copy/Paste dal precedente per completezza) ---
-        function updateDatalist(){/*...*/}
-        function deleteEntry(id){if(confirm("Eliminare?")){db=db.filter(i=>i.id!==id);triggerAutoSave();applyFilters();}}
-        function triggerAutoSave(){localStorage.setItem('lifelog_bi_v8',JSON.stringify(db));const i=document.getElementById('saveIndicator');i.classList.add('show');setTimeout(()=>i.classList.remove('show'),2000);}
-        function importFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();if(f.name.endsWith('.json')){r.onload=function(e){try{let j=JSON.parse(e.target.result);if(Array.isArray(j)){const ids=new Set(db.map(d=>d.id));j.forEach(i=>{if(!ids.has(i.id))db.push(i)});triggerAutoSave();applyFilters();alert("Fatto!");}}catch(err){alert("Errore JSON");}};r.readAsText(f);}else{r.onload=function(e){try{const d=new Uint8Array(e.target.result);const wb=XLSX.read(d,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const raw=XLSX.utils.sheet_to_json(ws);let c=0;const ids=new Set(db.map(d=>d.id));raw.forEach(r=>{let m={};if(r.Meta_Completo_JSON)try{m=JSON.parse(r.Meta_Completo_JSON)}catch(e){}else if(r.Meta)try{m=JSON.parse(r.Meta)}catch(e){}const i={id:r.ID||Date.now()+Math.floor(Math.random()*1000),date:r.Data||new Date().toISOString(),cat:r.Categoria||'Altro',title:r.Titolo||'Importato',rating:parseInt(r.Voto)||0,notes:r.Note||'',meta:m};if(!ids.has(i.id)){db.push(i);c++;}});triggerAutoSave();applyFilters();alert(`Importati ${c}`);}catch(e){console.error(e);alert("Errore Excel");}};r.readAsArrayBuffer(f);}}
-        function exportData(f){/*Same as prev*/}
-        function toggleExportMenu(){document.getElementById('exportMenu').classList.toggle('hidden');}
-        function checkBackupStatus(){/*Same as prev*/}
-        function switchView(viewName) {document.getElementById('viewHome').classList.add('hidden');document.getElementById('viewDash').classList.add('hidden');document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));if(viewName === 'home') {document.getElementById('viewHome').classList.remove('hidden');document.querySelectorAll('.nav-item')[0].classList.add('active');document.getElementById('dashTimeControls').classList.add('hidden');} else {document.getElementById('viewDash').classList.remove('hidden');document.querySelectorAll('.nav-item')[1].classList.add('active');if(activeFilters.cat === 'All') document.getElementById('dashTimeControls').classList.add('hidden');else document.getElementById('dashTimeControls').classList.remove('hidden');renderDashboard();}}
+            // Global expose for inline onclicks
+            window.app = app;
+            app.init();
+        });
     </script>
 </body>
 </html>
